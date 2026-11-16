@@ -1,122 +1,121 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import ProductCard from './components/ProductCard';
+import ProductModal from './components/ProductModal';
+import './App.css';
 
-function App() {
-  const [count, setCount] = useState(0)
+const API_URL = 'http://localhost:3000/api/products';
+
+export default function App() {
+  const [products, setProducts] = useState([]);
+  const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setProducts(data);
+    } catch (err) {
+      console.error('Gagal memuat produk:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = products.filter((item) =>
+    item.nama.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleOpenAdd = () => {
+    setEditingProduct(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (product) => {
+    setEditingProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveProduct = async (formData) => {
+    try {
+      if (editingProduct) {
+        await fetch(`${API_URL}/${editingProduct.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+      } else {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+      }
+      setIsModalOpen(false);
+      fetchProducts();
+    } catch (err) {
+      console.error('Gagal menyimpan produk:', err);
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    try {
+      await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      fetchProducts();
+    } catch (err) {
+      console.error('Gagal menghapus produk:', err);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <div className="container">
+      <header className="header">
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
+          <h1>Manajemen Produk</h1>
+          <p className="subtitle">Kelola daftar produk dan harga dalam satu tempat.</p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+        <button className="btn-primary" onClick={handleOpenAdd}>
+          + Tambah Produk
         </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <div className="toolbar">
+        <div className="search-box">
+          <span>🔍</span>
+          <input
+            type="text"
+            placeholder="Cari nama produk..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <span className="count-top">{products.length} produk</span>
+      </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <div className="product-grid">
+        {filteredProducts.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onEdit={handleOpenEdit}
+            onDelete={handleDeleteProduct}
+          />
+        ))}
+      </div>
+
+      <footer className="footer-info">
+        Menampilkan {filteredProducts.length} dari {products.length} produk
+      </footer>
+
+      <ProductModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveProduct}
+        initialData={editingProduct}
+      />
+    </div>
+  );
 }
-
-export default App
